@@ -55,7 +55,7 @@ class CELLO3:
         if valid:
             cont = input('\nContinue to evaluation? y/n ')
             if (cont == 'Y' or cont == 'y') and valid:
-                    best_result = self.techmap(iter) # Executing the algorithm if things check out
+                    best_result, worst_score = self.techmap(iter) # Executing the algorithm if things check out
 
                     # NOTE: best_result = tuple(circuit_score, graph_obj, truth_table)
                     best_score = best_result[0]
@@ -66,7 +66,8 @@ class CELLO3:
                     graph_inputs_for_printing = list(zip(self.rnl.inputs, best_graph.inputs))
                     graph_gates_for_printing = list(zip(self.rnl.gates, best_graph.gates))
                     graph_outputs_for_printing = list(zip(self.rnl.outputs, best_graph.outputs))
-                    
+
+                    debug_print(f'Worst result for {self.vrlgname}.v+{self.ucfname}: {worst_score}', padding=False)
                     debug_print(f'final result for {self.vrlgname}.v+{self.ucfname}: {best_result[0]}', padding=False)
                     debug_print(best_result[1], padding=False)
                     print()
@@ -159,14 +160,14 @@ class CELLO3:
         
         bestassignments = []
         if iter is not None:
-            bestassignments = self.exhaustive_assign(I_list, O_list, G_list, i, o, g, circuit, iter)
+            bestassignments, allscores = self.exhaustive_assign(I_list, O_list, G_list, i, o, g, circuit, iter)
         else:
             # TODO: make the other simulation() functions
             bestassignments = self.genetic_simulation(I_list, O_list, G_list, i, o, g, circuit)
         
         print_centered('End of GATE ASSIGNMENT', padding=True)
         
-        return max(bestassignments, key=lambda x: x[0]) if len(bestassignments) > 0 else bestassignments
+        return max(bestassignments, key=lambda x: x[0]) if len(bestassignments) > 0 else bestassignments, min(allscores)
     
     # NOTE: alternative to exhaustive assignment - simulation
     def genetic_simulation(self, I_list: list, O_list: list, G_list: list, i: int, o: int, g: int, netgraph: GraphParser):
@@ -180,6 +181,7 @@ class CELLO3:
         print_centered('Running EXHAUSTIVE gate-assignment algorithm...', padding=True)
         count = 0
         bestgraphs = []
+        allscores = []
         bestscore = 0
         # bestgraph = None
         for I_comb in itertools.permutations(I_list, i):
@@ -217,12 +219,13 @@ class CELLO3:
                             bestgraphs = [(circuit_score, graph, tb, tb_labels)]
                         elif circuit_score == bestscore:
                             bestgraphs.append((circuit_score, graph, tb_labels))
+                        allscores.append(circuit_score)
 
         if not self.verbose:
             print()
         print(f'\nDONE!\nCOUNTed: {count:,} iterations')
         
-        return bestgraphs
+        return bestgraphs, allscores
     
     
     # NOTE: this function calculates CIRCUIT SCORE
